@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EntropyCrack</title>
+  <link rel="stylesheet" href="/static/style.css?v=2">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="hero">
+    <div class="hero__content">
+      <div class="logo-container">
+        <div class="logo-center">
+          <h1>🔐</h1>
+        </div>
+      </div>
+      <h1>EntropyCrack</h1>
+      <p class="lede">Analyze passwords locally, hash them with SHA-256 and bcrypt, and simulate dictionary and bounded brute-force attacks. No plaintext is stored or logged.</p>
+    </div>
+  </header>
+
+  <main class="shell">
+    <!-- Password Generator Section -->
+    <section class="panel" id="generator">
+      <div class="panel__header">
+        <div>
+          <p class="tag">Password Generator</p>
+          <h2>Generate Secure Password</h2>
+          <p class="hint">Create strong, random passwords with customizable options.</p>
+        </div>
+        <div class="badge badge--success">New Feature</div>
+      </div>
+
+      <div class="form-row">
+        <label for="gen-length">Length: <span id="length-display">16</span></label>
+        <input type="range" id="gen-length" min="4" max="64" value="16" style="width: 100%;">
+      </div>
+
+      <div class="checkbox-group">
+        <label><input type="checkbox" id="gen-upper" checked> Uppercase (A-Z)</label>
+        <label><input type="checkbox" id="gen-lower" checked> Lowercase (a-z)</label>
+        <label><input type="checkbox" id="gen-digits" checked> Digits (0-9)</label>
+        <label><input type="checkbox" id="gen-special" checked> Special (!@#$%...)</label>
+        <label><input type="checkbox" id="gen-memorable"> Memorable (word-based)</label>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <input type="text" id="generated-password" readonly placeholder="Generated password will appear here">
+          <button id="generate-btn" type="button">Generate Password</button>
+          <button id="copy-btn" type="button" style="display:none;">Copy</button>
+        </div>
+      </div>
+
+      <div class="gen-stats" id="gen-stats" style="display:none;">
+        <span>Strength: <strong id="gen-score">-</strong></span>
+        <span>Entropy: <strong id="gen-entropy">-</strong> bits</span>
+      </div>
+    </section>
+
+    <!-- Keyword-based Generator -->
+    <section class="panel" id="keyword-generator">
+      <div class="panel__header">
+        <div>
+          <p class="tag">Keyword Boost</p>
+          <h2>Strengthen a Keyword</h2>
+          <p class="hint">Turn a name, phrase, or keyword into a stronger password while keeping it recognizable.</p>
+        </div>
+        <div class="badge badge--info">Smart Mix</div>
+      </div>
+
+      <div class="form-row">
+        <label for="keyword-seed">Keyword or phrase</label>
+        <div class="field">
+          <input type="text" id="keyword-seed" placeholder="e.g. companyname, favorite word" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label for="keyword-min-length">Minimum length</label>
+        <div class="field">
+          <input type="number" id="keyword-min-length" min="8" max="64" value="14" style="max-width: 140px;">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <input type="text" id="keyword-password-output" readonly placeholder="Keyword-based password will appear here">
+          <button id="keyword-generate-btn" type="button">Strengthen Keyword</button>
+          <button id="keyword-copy-btn" type="button" style="display:none;">Copy</button>
+        </div>
+      </div>
+
+      <div class="gen-stats" id="keyword-stats" style="display:none;">
+        <span>Strength: <strong id="keyword-score">-</strong></span>
+        <span>Entropy: <strong id="keyword-entropy">-</strong> bits</span>
+      </div>
+    </section>
+
+    <!-- Breach Checker Section -->
+    <section class="panel" id="breach-checker">
+      <div class="panel__header">
+        <div>
+          <p class="tag">Breach Detection</p>
+          <h2>Check if Password is Breached</h2>
+          <p class="hint">Verify if your password appears in known data breaches or common wordlists.</p>
+        </div>
+        <div class="badge badge--danger">Security Check</div>
+      </div>
+
+      <div class="form-row">
+        <label for="breach-password">Password to Check</label>
+        <div class="field">
+          <input type="password" id="breach-password" name="breach-password" placeholder="Enter password to check for breaches" autocomplete="off">
+          <button id="breach-check-btn" type="button">Check Breach</button>
+          <button id="breach-clear-btn" type="button" style="background: rgba(255, 255, 255, 0.1); color: var(--text); min-width: 100px;">Clear</button>
+        </div>
+      </div>
+
+      <div id="breach-results" style="display:none; margin-top: 20px;">
+        <div class="result-card" id="breach-result-card">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+            <div id="breach-icon" style="font-size: 32px;"></div>
+            <div>
+              <p class="label" style="margin: 0;">Breach Status</p>
+              <p class="value" id="breach-result-status" style="margin: 4px 0;">-</p>
+            </div>
+          </div>
+          <p class="meta" id="breach-result-message" style="margin: 0; line-height: 1.6;"></p>
+          <div id="breach-severity-badge" style="margin-top: 12px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="analyzer">
+      <div class="panel__header">
+        <div>
+          <p class="tag">Strength Analyzer</p>
+          <h2>Test a password</h2>
+          <p class="hint">Your input stays in-session; results are for learning, not real attack tooling.</p>
+        </div>
+        <div class="badge">Client + Server Checks</div>
+      </div>
+
+      <div class="form-row">
+        <label for="password">Password</label>
+        <div class="field">
+          <input type="password" id="password" name="password" placeholder="Enter a sample password" autocomplete="new-password" aria-describedby="password-help">
+          <button id="analyze-btn" type="button">Analyze Password</button>
+        </div>
+        <p id="password-help" class="hint">We hash on the backend; nothing is persisted.</p>
+      </div>
+
+      <div class="meter">
+        <div class="meter__bar" id="strength-bar"></div>
+        <div class="meter__label" id="strength-label">Waiting...</div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-item">
+          <span class="stat-label">Entropy:</span>
+          <span class="stat-value" id="entropy-value">-</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Breach Check:</span>
+          <span class="stat-value" id="breach-status">-</span>
+        </div>
+      </div>
+
+      <div class="feedback" id="feedback"></div>
+    </section>
+
+    <section class="panel" id="cracking">
+      <div class="panel__header">
+        <div>
+          <p class="tag">Cracking Simulation</p>
+          <h2>Dictionary + brute-force (bounded)</h2>
+          <p class="hint">Runs against hashes only; brute-force limited for responsiveness.</p>
+        </div>
+        <div class="badge badge--muted">Live demo</div>
+      </div>
+
+      <div class="results-grid">
+        <div class="result-card">
+          <p class="label">Dictionary attack</p>
+          <p class="value" id="dict-status">–</p>
+          <p class="meta" id="dict-meta"></p>
+        </div>
+        <div class="result-card">
+          <p class="label">Brute-force (demo)</p>
+          <p class="value" id="brute-status">–</p>
+          <p class="meta" id="brute-meta"></p>
+        </div>
+        <div class="result-card">
+          <p class="label">Time-to-crack estimate</p>
+          <p class="value" id="eta">–</p>
+          <p class="meta">Illustrative, not a guarantee.</p>
+        </div>
+        <div class="result-card">
+          <p class="label">Hashes (for study)</p>
+          <p class="meta" id="hashes">–</p>
+        </div>
+      </div>
+
+      <div class="recommendations" id="recs"></div>
+    </section>
+
+    <!-- Password Comparison Section -->
+    <section class="panel" id="comparison">
+      <div class="panel__header">
+        <div>
+          <p class="tag">Password Comparison</p>
+          <h2>Compare Two Passwords</h2>
+          <p class="hint">See which password is stronger side-by-side.</p>
+        </div>
+        <div class="badge badge--info">New Feature</div>
+      </div>
+
+      <div class="comparison-grid">
+        <div class="compare-input">
+          <label>Password 1</label>
+          <input type="password" id="compare-pw1" placeholder="Enter first password">
+        </div>
+        <div class="compare-input">
+          <label>Password 2</label>
+          <input type="password" id="compare-pw2" placeholder="Enter second password">
+        </div>
+      </div>
+
+      <button id="compare-btn" type="button" style="margin: 1rem 0;">Compare Passwords</button>
+
+      <div class="comparison-results" id="comparison-results" style="display:none;">
+        <div class="compare-card">
+          <h3>Password 1</h3>
+          <div class="compare-stats" id="compare-stats1"></div>
+        </div>
+        <div class="compare-card">
+          <h3>Password 2</h3>
+          <div class="compare-stats" id="compare-stats2"></div>
+        </div>
+      </div>
+      <div id="compare-winner" style="text-align:center;margin-top:1rem;"></div>
+    </section>
+
+    <!-- History Section -->
+    <section class="panel" id="history">
+      <div class="panel__header">
+        <div>
+          <p class="tag">Analysis History</p>
+          <h2>Session History</h2>
+          <p class="hint">View your recent password analyses (stored in session only).</p>
+        </div>
+        <button id="clear-history-btn" type="button" class="badge badge--danger" style="cursor:pointer;">Clear History</button>
+      </div>
+
+      <div id="history-list">
+        <p class="hint">No history yet. Analyze a password to see it here.</p>
+      </div>
+    </section>
+
+    <!-- Quiz Section -->
+    <section class="panel" id="quiz">
+      <div class="panel__header">
+        <div>
+          <p class="tag">Learn & Test</p>
+          <h2>Password Strength Quiz</h2>
+          <p class="hint">Test your knowledge about password security</p>
+        </div>
+        <button id="start-quiz-btn" type="button" class="btn btn--primary">Start Quiz</button>
+      </div>
+      <div id="quiz-container" style="display:none;">
+        <div id="quiz-question"></div>
+        <div id="quiz-options" class="grid"></div>
+        <div id="quiz-feedback" style="margin-top:1rem;"></div>
+        <div id="quiz-score" style="margin-top:1rem; font-weight:600;"></div>
+      </div>
+    </section>
+
+    <!-- Password Age Calculator -->
+    <section class="panel" id="age-calculator">
+      <div class="panel__header">
+        <div>
+          <p class="tag">Password Lifecycle</p>
+          <h2>Password Age Calculator</h2>
+          <p class="hint">Check if your password needs to be changed</p>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="grid">
+          <div class="form-group">
+            <label class="form-label">Password Created Date</label>
+            <input type="date" id="pwd-created-date" class="input-field">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Account Type</label>
+            <select id="account-type" class="input-field">
+              <option value="standard">Standard</option>
+              <option value="critical">Critical (Bank/Email)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Enter Password</label>
+          <input type="password" id="age-pwd" class="input-field" placeholder="••••••••">
+        </div>
+        <button id="check-age-btn" type="button" class="btn btn--primary">Check Age</button>
+      </div>
+      <div id="age-result" class="card" style="margin-top:1rem; display:none;"></div>
+    </section>
+
+    <!-- Batch Analysis -->
+    <section class="panel" id="batch-analysis">
+      <div class="panel__header">
+        <div>
+          <p class="tag">Bulk Testing</p>
+          <h2>Batch Password Analysis</h2>
+          <p class="hint">Analyze multiple passwords at once (one per line, max 100)</p>
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="form-label">Enter Passwords (one per line)</label>
+        <textarea id="batch-passwords" class="input-field" rows="8" placeholder="password1&#10;password2&#10;password3&#10;..."></textarea>
+        <button id="batch-analyze-btn" type="button" class="btn btn--primary">Analyze Batch</button>
+      </div>
+      <div id="batch-results" style="margin-top:1rem;"></div>
+    </section>
+
+    <!-- Export & Report -->
+    <section class="panel" id="export-section">
+      <div class="panel__header">
+        <div>
+          <p class="tag">Export & Reports</p>
+          <h2>Generate Reports</h2>
+          <p class="hint">Export analysis results or generate detailed security report</p>
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="form-label">Enter Password</label>
+        <input type="password" id="export-pwd" class="input-field" placeholder="••••••••">
+        <div class="grid" style="margin-top:1rem;">
+          <button id="export-json-btn" type="button" class="btn btn--secondary">Export JSON</button>
+          <button id="generate-report-btn" type="button" class="btn btn--primary">Generate Report</button>
+        </div>
+      </div>
+      <div id="report-output" class="card" style="margin-top:1rem; display:none;"></div>
+    </section>
+
+    <!-- Custom Wordlist -->
+    <section class="panel" id="wordlist-section">
+      <div class="panel__header">
+        <div>
+          <p class="tag">Custom Dictionary</p>
+          <h2>Upload Custom Wordlist</h2>
+          <p class="hint">Add your own wordlist for dictionary attack testing (one word per line, max 10,000)</p>
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="form-label">Enter Words (one per line)</label>
+        <textarea id="wordlist-input" class="input-field" rows="8" placeholder="word1&#10;word2&#10;word3&#10;..."></textarea>
+        <button id="upload-wordlist-btn" type="button" class="btn btn--primary">Upload Wordlist</button>
+      </div>
+      <div id="wordlist-status" style="margin-top:1rem;"></div>
+    </section>
+
+    <!-- Attack Visualization -->
+    <section class="panel" id="attack-viz">
+      <div class="panel__header">
+        <div>
+          <p class="tag">Learn How Attacks Work</p>
+          <h2>Attack Visualization</h2>
+          <p class="hint">Understand different password cracking methods</p>
+        </div>
+      </div>
+      <div class="grid">
+        <button class="attack-btn" data-attack="dictionary_attack">Dictionary Attack</button>
+        <button class="attack-btn" data-attack="brute_force_attack">Brute Force Attack</button>
+        <button class="attack-btn" data-attack="hybrid_attack">Hybrid Attack</button>
+      </div>
+      <div id="attack-details" class="card" style="margin-top:1rem; display:none;"></div>
+    </section>
+  </main>
+
+  <script src="/static/script.js?v=4"></script>
